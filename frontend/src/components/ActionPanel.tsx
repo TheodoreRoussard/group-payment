@@ -82,7 +82,7 @@ export function ActionPanel({ state, wallet, now, onDone }: Props) {
           <Alert /> Le compte connecté ne fait pas partie de ce groupe. Seuls les membres listés à la création du contrat peuvent verser et approuver.
         </p>
         <p className="hint">
-          Pour tester, importez dans Freighter la clé d’un participant de démo : <code>stellar keys show bob</code>.
+          Pour tester, importez dans Freighter la clé d’un participant de démo : <code>stellar keys secret bob</code>.
         </p>
       </Shell>
     )

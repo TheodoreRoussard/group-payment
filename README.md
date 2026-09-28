@@ -4,6 +4,18 @@ Un smart contract Soroban où chaque participant **verse sa part**, puis **donne
 Quand le dernier accord arrive, le contrat **paie automatiquement** le destinataire, dans la même transaction.
 Tant que le paiement n'est pas parti, chacun peut **retirer** sa part.
 
+## Aperçu
+
+![Interface, thème clair](docs/apercu-clair.png)
+
+<details><summary>Thème sombre</summary>
+
+![Interface, thème sombre](docs/apercu-sombre.png)
+
+</details>
+
+## Structure
+
 - `src/` : le contrat (Rust, `soroban-sdk` 28) et ses tests
 - `frontend/` : l'interface web (Vite + React + TypeScript, wallet Freighter)
 
@@ -49,6 +61,6 @@ pnpm dev
 ```
 
 L'adresse du contrat se règle dans `frontend/.env` (`VITE_CONTRACT_ID`, `VITE_START_LEDGER`).
-Pour agir en tant que participant de démo, importez sa clé dans Freighter (réseau Testnet) : `stellar keys show bob`.
+Pour agir en tant que participant de démo, importez sa clé dans Freighter (réseau Testnet) : `stellar keys secret bob`.
 
 > Projet d'apprentissage, non audité : ne pas utiliser sur le mainnet en l'état.
