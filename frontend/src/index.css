@@ -70,7 +70,10 @@ code { font-family: ui-monospace, 'SF Mono', monospace; font-size: 0.85em; backg
 .logo i:nth-child(2) { background: #10b981; }
 .logo i:nth-child(3) { background: var(--accent); }
 .account { display: flex; align-items: center; gap: 8px; }
+.account-who { display: flex; flex-direction: column; line-height: 1.2; }
 .account-name { font-weight: 550; font-size: 14px; }
+.account-wallet { font-size: 11px; color: var(--text-3); }
+@media (max-width: 520px) { .account-who { display: none; } }
 
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
 .col-main, .col-side { display: grid; gap: 20px; min-width: 0; }

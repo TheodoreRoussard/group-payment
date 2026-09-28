@@ -17,7 +17,7 @@ Tant que le paiement n'est pas parti, chacun peut **retirer** sa part.
 ## Structure
 
 - `src/` : le contrat (Rust, `soroban-sdk` 28) et ses tests
-- `frontend/` : l'interface web (Vite + React + TypeScript, wallet Freighter)
+- `frontend/` : l'interface web (Vite + React + TypeScript, Stellar Wallets Kit : Freighter, xBull, Lobstr, Albedo, Hana, Rabet)
 
 ## Déploiement testnet actuel
 
@@ -61,6 +61,6 @@ pnpm dev
 ```
 
 L'adresse du contrat se règle dans `frontend/.env` (`VITE_CONTRACT_ID`, `VITE_START_LEDGER`).
-Pour agir en tant que participant de démo, importez sa clé dans Freighter (réseau Testnet) : `stellar keys secret bob`.
+Pour agir en tant que participant de démo, importez sa clé dans votre wallet (réseau Testnet) : `stellar keys secret bob`.
 
 > Projet d'apprentissage, non audité : ne pas utiliser sur le mainnet en l'état.

@@ -4,6 +4,7 @@ import { displayName } from '../lib/labels'
 import {
   EXPLORER,
   explainError,
+  isModalClosed,
   formatXlm,
   makeClient,
   sendAction,
@@ -15,7 +16,7 @@ import { Alert, Check, External, Lock, Send, Spinner, ThumbUp, Undo, Wallet as W
 
 const PHASE_LABEL: Record<Phase, string> = {
   simulating: 'Vérification de la transaction…',
-  signing: 'Confirmez dans Freighter…',
+  signing: 'Confirmez dans votre wallet…',
   sending: 'Envoi au réseau et confirmation…',
 }
 
@@ -39,26 +40,17 @@ export function ActionPanel({ state, wallet, now, onDone }: Props) {
   const [phase, setPhase] = useState<Phase | null>(null)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
 
-  if (wallet.installed === false) {
-    return (
-      <Shell>
-        <p className="lead">Pour participer, installez le wallet <strong>Freighter</strong> et passez-le sur le réseau <strong>Testnet</strong>.</p>
-        <a className="btn btn-primary btn-block" href="https://www.freighter.app/" target="_blank" rel="noreferrer">
-          Installer Freighter <External />
-        </a>
-        <p className="hint">Vous pouvez suivre la cagnotte sans wallet : tout est public et en lecture libre.</p>
-      </Shell>
-    )
-  }
-
   if (!wallet.address) {
+    const connect = () =>
+      wallet.connect().catch((e) => !isModalClosed(e) && setOutcome({ ok: false, text: explainError(e) }))
     return (
       <Shell>
-        <p className="lead">Connectez votre wallet pour voir ce que vous pouvez faire dans ce groupe.</p>
-        <button className="btn btn-primary btn-block" onClick={() => wallet.connect().catch((e) => setOutcome({ ok: false, text: explainError(e) }))} disabled={wallet.connecting}>
-          {wallet.connecting ? <Spinner /> : <WalletIcon />} Connecter Freighter
+        <p className="lead">Connectez un wallet Stellar (Freighter, xBull, Lobstr…) pour voir ce que vous pouvez faire dans ce groupe.</p>
+        <button className="btn btn-primary btn-block" onClick={connect} disabled={wallet.connecting}>
+          {wallet.connecting ? <Spinner /> : <WalletIcon />} Connecter un wallet
         </button>
         {outcome && !outcome.ok && <p className="notice notice-error"><Alert /> {outcome.text}</p>}
+        <p className="hint">Vous pouvez suivre la cagnotte sans wallet : tout est public et en lecture libre.</p>
       </Shell>
     )
   }
@@ -67,7 +59,7 @@ export function ActionPanel({ state, wallet, now, onDone }: Props) {
     return (
       <Shell>
         <p className="notice notice-warning">
-          <Alert /> Freighter n’est pas sur le réseau Testnet. Changez de réseau dans l’extension : la page se mettra à jour toute seule.
+          <Alert /> Votre wallet n’est pas sur le réseau Testnet. Changez de réseau dans le wallet : la page se mettra à jour toute seule.
         </p>
       </Shell>
     )
@@ -82,7 +74,7 @@ export function ActionPanel({ state, wallet, now, onDone }: Props) {
           <Alert /> Le compte connecté ne fait pas partie de ce groupe. Seuls les membres listés à la création du contrat peuvent verser et approuver.
         </p>
         <p className="hint">
-          Pour tester, importez dans Freighter la clé d’un participant de démo : <code>stellar keys secret bob</code>.
+          Changez de compte dans votre wallet, ou importez-y la clé d’un participant de démo : <code>stellar keys secret bob</code>.
         </p>
       </Shell>
     )
@@ -143,6 +135,7 @@ export function ActionPanel({ state, wallet, now, onDone }: Props) {
           isLastApproval={isLastApproval}
           busy={busy}
           phase={phase}
+          walletName={wallet.walletName ?? 'le wallet'}
           onCancel={() => setConfirm(null)}
           onConfirm={() => run(confirm)}
         />
@@ -212,10 +205,11 @@ function ConfirmBox(props: {
   isLastApproval: boolean
   busy: boolean
   phase: Phase | null
+  walletName: string
   onCancel: () => void
   onConfirm: () => void
 }) {
-  const { action, amount, total, recipient, isLastApproval, busy, phase } = props
+  const { action, amount, total, recipient, isLastApproval, busy, phase, walletName } = props
   const rows: Record<Action, { title: string; lines: [string, string][]; note: string }> = {
     contribute: {
       title: 'Verser votre part',
@@ -257,7 +251,7 @@ function ConfirmBox(props: {
       <div className="confirm-actions">
         <button className="btn btn-ghost" onClick={props.onCancel} disabled={busy}>Annuler</button>
         <button className="btn btn-primary" onClick={props.onConfirm} disabled={busy}>
-          {busy ? <><Spinner /> {PHASE_LABEL[phase ?? 'simulating']}</> : <><Send /> Signer dans Freighter</>}
+          {busy ? <><Spinner /> {PHASE_LABEL[phase ?? 'simulating']}</> : <><Send /> Signer dans {walletName}</>}
         </button>
       </div>
     </div>

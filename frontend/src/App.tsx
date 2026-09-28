@@ -38,15 +38,19 @@ export default function App() {
         {wallet.address ? (
           <div className="account">
             <Avatar address={wallet.address} size={28} />
-            <span className="account-name">{displayName(wallet.address) ?? shortAddress(wallet.address)}</span>
+            <span className="account-who">
+              <span className="account-name">{displayName(wallet.address) ?? shortAddress(wallet.address)}</span>
+              {wallet.walletName && <span className="account-wallet">via {wallet.walletName}</span>}
+            </span>
+            <button className="btn btn-ghost btn-sm" onClick={() => wallet.connect().catch(() => {})} disabled={wallet.connecting}>
+              Changer
+            </button>
             <button className="btn btn-ghost btn-sm" onClick={wallet.disconnect}>Déconnecter</button>
           </div>
         ) : (
-          wallet.installed && (
-            <button className="btn btn-sm" onClick={() => wallet.connect().catch(() => {})} disabled={wallet.connecting}>
-              Connecter Freighter
-            </button>
-          )
+          <button className="btn btn-sm" onClick={() => wallet.connect().catch(() => {})} disabled={wallet.connecting}>
+            Connecter un wallet
+          </button>
         )}
       </header>
 

@@ -106,8 +106,18 @@ const CONTRACT_ERRORS: Record<number, string> = {
   11: 'Le paiement a déjà été exécuté.',
 }
 
+/** Le wallet kit rejette avec des objets `{ code, message }` ; code -1 = sélecteur fermé. */
+export function isModalClosed(e: unknown): boolean {
+  return typeof e === 'object' && e !== null && (e as { code?: unknown }).code === -1
+}
+
 export function explainError(e: unknown): string {
-  const text = e instanceof Error ? e.message : String(e)
+  const text =
+    e instanceof Error
+      ? e.message
+      : typeof e === 'object' && e !== null && 'message' in e
+        ? String((e as { message: unknown }).message)
+        : String(e)
   const code = text.match(/Error\(Contract, #(\d+)\)/)?.[1]
   if (code && CONTRACT_ERRORS[+code]) return CONTRACT_ERRORS[+code]
   if (/declined|rejected|denied/i.test(text)) return 'Signature refusée dans le wallet.'
