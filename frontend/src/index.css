@@ -136,6 +136,9 @@ code { font-family: ui-monospace, 'SF Mono', monospace; font-size: 0.85em; backg
 .notice-calm { background: var(--accent-soft); color: var(--accent-text); }
 .notice a { color: inherit; text-decoration: underline; }
 .page-error { margin-bottom: 20px; }
+.wallet-notice { margin-bottom: 20px; align-items: center; }
+.wallet-notice > span { flex: 1; }
+.wallet-notice .btn { flex-shrink: 0; }
 
 /* --- Participants --- */
 .participants li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }

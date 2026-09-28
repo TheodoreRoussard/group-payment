@@ -7,7 +7,7 @@ import { Alert, Lock, Send, ThumbUp } from './components/Icons'
 import { Overview } from './components/Overview'
 import { Participants } from './components/Participants'
 import { useGroupPayment } from './hooks/useGroupPayment'
-import { useWallet } from './hooks/useWallet'
+import { useWallet, type Wallet } from './hooks/useWallet'
 import { displayName } from './lib/labels'
 import { CONTRACT_ID, shortAddress } from './lib/stellar'
 
@@ -42,7 +42,12 @@ export default function App() {
               <span className="account-name">{displayName(wallet.address) ?? shortAddress(wallet.address)}</span>
               {wallet.walletName && <span className="account-wallet">via {wallet.walletName}</span>}
             </span>
-            <button className="btn btn-ghost btn-sm" onClick={() => wallet.connect().catch(() => {})} disabled={wallet.connecting}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => wallet.connect().catch(() => {})}
+              disabled={wallet.connecting}
+              title="Choisir un autre wallet. Avec Freighter, le compte se change dans l’extension."
+            >
               Changer
             </button>
             <button className="btn btn-ghost btn-sm" onClick={wallet.disconnect}>Déconnecter</button>
@@ -53,6 +58,8 @@ export default function App() {
           </button>
         )}
       </header>
+
+      {wallet.notice && <WalletNoticeBar wallet={wallet} />}
 
       {error && !state && (
         <p className="notice notice-error page-error"><Alert /> Impossible de lire le contrat : {error}</p>
@@ -78,6 +85,30 @@ export default function App() {
         <span>Contrat <AddressLink address={CONTRACT_ID} /></span>
         <span className="muted">Données lues en direct sur le testnet Stellar · actualisation toutes les 6 s</span>
       </footer>
+    </div>
+  )
+}
+
+function WalletNoticeBar({ wallet }: { wallet: Wallet }) {
+  if (wallet.notice === 'freighter-needs-access') {
+    return (
+      <div className="notice notice-warning wallet-notice" role="status">
+        <Alert />
+        <span>Le compte actif dans Freighter n’a pas encore autorisé ce site.</span>
+        <button className="btn btn-sm" onClick={() => wallet.authorizeActiveAccount().catch(() => {})}>
+          Autoriser ce compte
+        </button>
+      </div>
+    )
+  }
+  return (
+    <div className="notice notice-calm wallet-notice" role="status">
+      <Alert />
+      <span>
+        Freighter utilise toujours <strong>le compte actif dans l’extension</strong>. Pour passer sur un autre compte
+        (Carol par exemple), ouvrez Freighter et sélectionnez-le : la page suivra toute seule en quelques secondes.
+      </span>
+      <button className="btn btn-ghost btn-sm" onClick={wallet.dismissNotice}>OK</button>
     </div>
   )
 }
