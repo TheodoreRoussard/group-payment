@@ -166,26 +166,55 @@ export interface Activity {
   txHash: string
 }
 
+const EVENT_FILTERS: rpc.Api.EventFilter[] = [{ type: 'contract', contractIds: [CONTRACT_ID] }]
+const MAX_PAGES_PER_READ = 20
+
+// Le RPC ne parcourt qu'une fenêtre limitée de ledgers par requête (~10 000) :
+// une seule requête depuis le déploiement rate donc les events récents. On pagine
+// avec le curseur jusqu'au dernier ledger, et on garde curseur + events en mémoire
+// pour que chaque rafraîchissement ne lise que les nouveaux ledgers.
+let activityCursor: string | undefined
+let activityLog: Activity[] = []
+
+/** Ledger atteint par un curseur d'events (les 32 bits de poids fort du TOID). */
+function cursorLedger(cursor: string): number {
+  return Number(BigInt(cursor.split('-')[0]) >> 32n)
+}
+
+function toActivity(ev: rpc.Api.EventResponse): Activity {
+  const data = scValToNative(ev.value) as Record<string, bigint | number>
+  return {
+    id: ev.id,
+    kind: scValToNative(ev.topic[0]) as ActivityKind,
+    who: scValToNative(ev.topic[1]) as string,
+    amount: (data.amount ?? data.total) as bigint | undefined,
+    at: new Date(ev.ledgerClosedAt),
+    txHash: ev.txHash,
+  }
+}
+
 export async function readActivity(): Promise<Activity[]> {
-  const res = await server.getEvents({
-    startLedger: START_LEDGER,
-    filters: [{ type: 'contract', contractIds: [CONTRACT_ID] }],
-    limit: 100,
-  })
-  return res.events
-    .map((ev) => {
-      const kind = scValToNative(ev.topic[0]) as ActivityKind
-      const data = scValToNative(ev.value) as Record<string, bigint | number>
-      return {
-        id: ev.id,
-        kind,
-        who: scValToNative(ev.topic[1]) as string,
-        amount: (data.amount ?? data.total) as bigint | undefined,
-        at: new Date(ev.ledgerClosedAt),
-        txHash: ev.txHash,
-      }
+  if (!activityCursor) {
+    // Le RPC ne conserve qu'environ 7 jours d'events : on ne peut pas partir d'avant.
+    const { oldestLedger } = await server.getHealth()
+    const res = await server.getEvents({
+      startLedger: Math.max(START_LEDGER, oldestLedger),
+      filters: EVENT_FILTERS,
+      limit: 100,
     })
-    .reverse()
+    activityLog = res.events.map(toActivity)
+    activityCursor = res.cursor
+    if (cursorLedger(res.cursor) >= res.latestLedger) return [...activityLog].reverse()
+  }
+
+  for (let page = 0; page < MAX_PAGES_PER_READ; page++) {
+    const res = await server.getEvents({ cursor: activityCursor, filters: EVENT_FILTERS, limit: 100 })
+    const seen = new Set(activityLog.map((a) => a.id))
+    activityLog.push(...res.events.filter((ev) => !seen.has(ev.id)).map(toActivity))
+    activityCursor = res.cursor
+    if (cursorLedger(res.cursor) >= res.latestLedger) break
+  }
+  return [...activityLog].reverse()
 }
 
 // --- Formatage ---
