@@ -11,14 +11,17 @@ export function useGroupPayment(pot: PotEntry | null) {
   const [error, setError] = useState<string | null>(null)
   const current = useRef<string | null>(null)
 
+  // Dépendances primitives : la sidebar recrée les objets `pot` à chaque
+  // rafraîchissement, et dépendre de l'objet relancerait l'effet ci-dessous
+  // (vidage de l'état → squelette de chargement) toutes les 8 secondes.
+  const address = pot?.address ?? null
+  const startLedger = pot?.created_ledger ?? 0
+  const fromFactory = pot?.fromFactory ?? false
+
   const refresh = useCallback(async () => {
-    if (!pot) return
-    const address = pot.address
+    if (!address) return
     try {
-      const [s, a] = await Promise.all([
-        readState(address),
-        readActivity(address, pot.created_ledger, pot.fromFactory),
-      ])
+      const [s, a] = await Promise.all([readState(address), readActivity(address, startLedger, fromFactory)])
       if (current.current !== address) return // l'utilisateur a changé de pot entre-temps
       setState(s)
       setActivity(a)
@@ -26,17 +29,18 @@ export function useGroupPayment(pot: PotEntry | null) {
     } catch (e) {
       if (current.current === address) setError(e instanceof Error ? e.message : String(e))
     }
-  }, [pot])
+  }, [address, startLedger, fromFactory])
 
+  // Ne se relance que quand on change réellement de pot.
   useEffect(() => {
-    current.current = pot?.address ?? null
+    current.current = address
     setState(null)
     setActivity([])
     setError(null)
     refresh()
     const id = setInterval(refresh, POLL_MS)
     return () => clearInterval(id)
-  }, [pot?.address, refresh])
+  }, [address, refresh])
 
   return { state, activity, error, refresh }
 }
