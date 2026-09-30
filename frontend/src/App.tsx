@@ -1,15 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ActionPanel } from './components/ActionPanel'
 import { ActivityFeed } from './components/ActivityFeed'
 import { AddressLink } from './components/AddressLink'
 import { Avatar } from './components/Avatar'
-import { Alert, Lock, Send, ThumbUp } from './components/Icons'
+import { CreatePot } from './components/CreatePot'
+import { Alert, Close, Lock, Menu, Send, ThumbUp } from './components/Icons'
+import { Invitations } from './components/Invitations'
 import { Overview } from './components/Overview'
 import { Participants } from './components/Participants'
+import { Sidebar } from './components/Sidebar'
 import { useGroupPayment } from './hooks/useGroupPayment'
+import { usePots } from './hooks/usePots'
+import { useRoute } from './hooks/useRoute'
+import { useSeen } from './hooks/useSeen'
 import { useWallet, type Wallet } from './hooks/useWallet'
 import { displayName } from './lib/labels'
-import { CONTRACT_ID, shortAddress } from './lib/stellar'
+import { notificationsFor } from './lib/notifications'
+import type { PotEntry } from './lib/pots'
+import { FACTORY_ID, shortAddress } from './lib/stellar'
 
 function useNow(intervalMs = 30_000) {
   const [now, setNow] = useState(() => new Date())
@@ -22,69 +30,156 @@ function useNow(intervalMs = 30_000) {
 
 export default function App() {
   const wallet = useWallet()
-  const { state, activity, error, refresh } = useGroupPayment()
   const now = useNow()
+  const { route, go } = useRoute()
+  const { pots, summaries, loaded, refresh: refreshPots } = usePots()
+  const { seen, markSeen } = useSeen(wallet.address)
+  const [drawer, setDrawer] = useState(false)
+
+  const selected = route.name === 'pot' ? pots.find((p) => p.address === route.id) ?? null : null
+
+  // Sans pot dans l'URL, on ouvre le plus récent (sans polluer l'historique).
+  useEffect(() => {
+    if (route.name === 'home' && pots.length) location.replace(`#/pot/${pots[0].address}`)
+  }, [route.name, pots])
+
+  const notifications = useMemo(
+    () => (wallet.address ? notificationsFor(wallet.address, pots, summaries, now) : []),
+    [wallet.address, pots, summaries, now],
+  )
+
+  const open = (address: string) => {
+    go({ name: 'pot', id: address })
+    setDrawer(false)
+  }
 
   return (
-    <div className="page">
+    <div className="app">
       <header className="topbar">
         <div className="brand">
+          <button className="icon-btn menu-btn" onClick={() => setDrawer(true)} aria-label="Ouvrir la liste des pots">
+            <Menu width={18} height={18} />
+          </button>
           <span className="logo" aria-hidden>
             <i /><i /><i />
           </span>
           <span>Pot commun</span>
           <span className="pill pill-network">Testnet</span>
         </div>
-        {wallet.address ? (
-          <div className="account">
-            <Avatar address={wallet.address} size={28} />
-            <span className="account-who">
-              <span className="account-name">{displayName(wallet.address) ?? shortAddress(wallet.address)}</span>
-              {wallet.walletName && <span className="account-wallet">via {wallet.walletName}</span>}
-            </span>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => wallet.connect().catch(() => {})}
-              disabled={wallet.connecting}
-              title="Choisir un autre wallet. Avec Freighter, le compte se change dans l’extension."
-            >
-              Changer
+        <div className="topbar-right">
+          {wallet.address && (
+            <Invitations items={notifications} seen={seen} onSeen={markSeen} onOpenPot={open} />
+          )}
+          {wallet.address ? (
+            <div className="account">
+              <Avatar address={wallet.address} size={28} />
+              <span className="account-who">
+                <span className="account-name">{displayName(wallet.address) ?? shortAddress(wallet.address)}</span>
+                {wallet.walletName && <span className="account-wallet">via {wallet.walletName}</span>}
+              </span>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => wallet.connect().catch(() => {})}
+                disabled={wallet.connecting}
+                title="Choisir un autre wallet. Avec Freighter, le compte se change dans l’extension."
+              >
+                Changer
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={wallet.disconnect}>Déconnecter</button>
+            </div>
+          ) : (
+            <button className="btn btn-sm" onClick={() => wallet.connect().catch(() => {})} disabled={wallet.connecting}>
+              Connecter un wallet
             </button>
-            <button className="btn btn-ghost btn-sm" onClick={wallet.disconnect}>Déconnecter</button>
-          </div>
-        ) : (
-          <button className="btn btn-sm" onClick={() => wallet.connect().catch(() => {})} disabled={wallet.connecting}>
-            Connecter un wallet
-          </button>
-        )}
+          )}
+        </div>
       </header>
 
-      {wallet.notice && <WalletNoticeBar wallet={wallet} />}
+      <div className="shell">
+        <div className={`sidebar-wrap ${drawer ? 'is-open' : ''}`}>
+          <button className="icon-btn drawer-close" onClick={() => setDrawer(false)} aria-label="Fermer">
+            <Close />
+          </button>
+          <Sidebar
+            pots={pots}
+            summaries={summaries}
+            loaded={loaded}
+            selected={selected?.address ?? null}
+            creating={route.name === 'new'}
+            me={wallet.address}
+            now={now}
+            onSelect={open}
+            onCreate={() => {
+              go({ name: 'new' })
+              setDrawer(false)
+            }}
+          />
+        </div>
+        {drawer && <div className="scrim" onClick={() => setDrawer(false)} />}
 
-      {error && !state && (
-        <p className="notice notice-error page-error"><Alert /> Impossible de lire le contrat : {error}</p>
-      )}
+        <main className="content">
+          {wallet.notice && <WalletNoticeBar wallet={wallet} />}
 
-      {!state ? (
-        <Skeleton />
-      ) : (
-        <main className="layout">
-          <div className="col-main">
-            <Overview state={state} now={now} />
-            <Participants state={state} me={wallet.address} />
-          </div>
-          <aside className="col-side">
-            <ActionPanel state={state} wallet={wallet} now={now} onDone={refresh} />
-            <HowItWorks />
-            <ActivityFeed activity={activity} now={now} />
-          </aside>
+          {route.name === 'new' ? (
+            <CreatePot
+              wallet={wallet}
+              onCancel={() => history.back()}
+              onCreated={async (address) => {
+                await refreshPots()
+                open(address)
+              }}
+            />
+          ) : selected ? (
+            <PotView key={selected.address} pot={selected} wallet={wallet} now={now} onChanged={refreshPots} />
+          ) : loaded && route.name === 'pot' ? (
+            <p className="notice notice-warning"><Alert /> Ce pot n’existe pas dans le registre.</p>
+          ) : (
+            <Skeleton />
+          )}
+
+          <footer className="footer">
+            <span className="footer-links">
+              {selected && <span>Contrat du pot <AddressLink address={selected.address} /></span>}
+              {FACTORY_ID && <span>Registre <AddressLink address={FACTORY_ID} /></span>}
+            </span>
+            <span className="muted">Données lues en direct sur le testnet Stellar</span>
+          </footer>
         </main>
-      )}
+      </div>
+    </div>
+  )
+}
 
-      <footer className="footer">
-        <span>Contrat <AddressLink address={CONTRACT_ID} /></span>
-        <span className="muted">Données lues en direct sur le testnet Stellar · actualisation toutes les 6 s</span>
-      </footer>
+function PotView({ pot, wallet, now, onChanged }: { pot: PotEntry; wallet: Wallet; now: Date; onChanged: () => void }) {
+  const { state, activity, error, refresh } = useGroupPayment(pot)
+
+  if (!state) {
+    return error ? (
+      <p className="notice notice-error"><Alert /> Impossible de lire le contrat : {error}</p>
+    ) : (
+      <Skeleton />
+    )
+  }
+  return (
+    <div className="layout">
+      <div className="col-main">
+        <Overview title={pot.title} state={state} now={now} me={wallet.address} />
+        <Participants state={state} me={wallet.address} />
+      </div>
+      <aside className="col-side">
+        <ActionPanel
+          pot={pot.address}
+          state={state}
+          wallet={wallet}
+          now={now}
+          onDone={() => {
+            refresh()
+            onChanged()
+          }}
+        />
+        <ActivityFeed activity={activity} now={now} />
+        <HowItWorks />
+      </aside>
     </div>
   )
 }
@@ -141,7 +236,7 @@ function HowItWorks() {
 
 function Skeleton() {
   return (
-    <main className="layout" aria-busy>
+    <div className="layout" aria-busy>
       <div className="col-main">
         <div className="card skeleton" style={{ height: 340 }} />
         <div className="card skeleton" style={{ height: 240 }} />
@@ -149,6 +244,6 @@ function Skeleton() {
       <aside className="col-side">
         <div className="card skeleton" style={{ height: 220 }} />
       </aside>
-    </main>
+    </div>
   )
 }

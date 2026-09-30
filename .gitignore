@@ -1,5 +1,5 @@
 /target
-/test_snapshots
+test_snapshots/
 .idea/
 .claude/
 .DS_Store

@@ -13,7 +13,7 @@ export function formatCountdown(deadline: Date, now: Date): string {
   return `${m} min`
 }
 
-export function Overview({ state, now }: { state: GroupPaymentState; now: Date }) {
+export function Overview({ title, state, now, me }: { title: string; state: GroupPaymentState; now: Date; me: string | null }) {
   const { config, participants, approvals, status } = state
   const n = participants.length
   const contributed = participants.filter((p) => p.state.contributed).length
@@ -26,10 +26,10 @@ export function Overview({ state, now }: { state: GroupPaymentState; now: Date }
     <section className="card overview">
       <div className="overview-head">
         <div>
-          <p className="eyebrow">Paiement de groupe</p>
-          <h1>
-            Payer {recipientName === 'destinataire' ? 'le destinataire' : `le ${recipientName.toLowerCase()}`}
-          </h1>
+          <p className="eyebrow">
+            Paiement de groupe · pour {me === config.recipient ? 'vous' : recipientName === 'destinataire' ? 'le destinataire' : recipientName}
+          </p>
+          <h1>{title}</h1>
         </div>
         <StatusPill status={status} expired={expired} />
       </div>

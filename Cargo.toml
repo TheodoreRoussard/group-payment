@@ -1,16 +1,9 @@
-[package]
-name = "group_payment"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+resolver = "3"
+members = ["contracts/*"]
 
-[lib]
-crate-type = ["lib", "cdylib"]
-
-[dependencies]
+[workspace.dependencies]
 soroban-sdk = "28"
-
-[dev-dependencies]
-soroban-sdk = { version = "28", features = ["testutils"] }
 
 [profile.release]
 opt-level = "z"

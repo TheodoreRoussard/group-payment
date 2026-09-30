@@ -1,6 +1,6 @@
 import { displayName } from '../lib/labels'
 import { EXPLORER, formatXlm, shortAddress, type Activity } from '../lib/stellar'
-import { Check, External, Lock, Send, Undo } from './Icons'
+import { Check, External, Lock, Mail, Plus, Send, Undo } from './Icons'
 
 const rtf = new Intl.RelativeTimeFormat('fr', { numeric: 'auto' })
 
@@ -13,6 +13,8 @@ function ago(date: Date, now: Date): string {
 }
 
 const COPY = {
+  created: { icon: Plus, verb: 'a créé le pot', tone: 'tone-muted' },
+  invited: { icon: Mail, verb: 'Invitation envoyée à', tone: 'tone-muted' },
   contributed: { icon: Lock, verb: 'a versé', tone: '' },
   approved: { icon: Check, verb: 'a donné son accord', tone: '' },
   withdrawn: { icon: Undo, verb: 'a retiré', tone: 'tone-muted' },
@@ -38,7 +40,7 @@ export function ActivityFeed({ activity, now }: { activity: Activity[]; now: Dat
                 <span className="feed-icon"><Icon width={14} height={14} /></span>
                 <div className="feed-body">
                   <p>
-                    {a.kind === 'executed' ? (
+                    {a.kind === 'executed' || a.kind === 'invited' ? (
                       <>{verb} <strong>{who}</strong></>
                     ) : (
                       <><strong>{who}</strong> {verb}</>

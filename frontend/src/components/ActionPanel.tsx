@@ -6,13 +6,13 @@ import {
   explainError,
   isModalClosed,
   formatXlm,
-  makeClient,
+  makePotClient,
   sendAction,
   type Action,
   type GroupPaymentState,
   type Phase,
 } from '../lib/stellar'
-import { Alert, Check, External, Lock, Send, Spinner, ThumbUp, Undo, Wallet as WalletIcon } from './Icons'
+import { Alert, Check, Copy, Crown, External, Lock, Send, Spinner, ThumbUp, Undo, Wallet as WalletIcon } from './Icons'
 
 const PHASE_LABEL: Record<Phase, string> = {
   simulating: 'Vérification de la transaction…',
@@ -29,13 +29,14 @@ const DONE_LABEL: Record<Action, string> = {
 type Outcome = { ok: true; text: string; hash: string } | { ok: false; text: string }
 
 interface Props {
+  pot: string
   state: GroupPaymentState
   wallet: Wallet
   now: Date
   onDone: () => void
 }
 
-export function ActionPanel({ state, wallet, now, onDone }: Props) {
+export function ActionPanel({ pot, state, wallet, now, onDone }: Props) {
   const [confirm, setConfirm] = useState<Action | null>(null)
   const [phase, setPhase] = useState<Phase | null>(null)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
@@ -67,6 +68,7 @@ export function ActionPanel({ state, wallet, now, onDone }: Props) {
 
   const me = wallet.address
   const mine = state.participants.find((p) => p.address === me)?.state
+  if (me === state.config.recipient) return <OwnerView state={state} now={now} />
   if (!mine) {
     return (
       <Shell>
@@ -95,7 +97,7 @@ export function ActionPanel({ state, wallet, now, onDone }: Props) {
   const run = async (action: Action) => {
     setOutcome(null)
     try {
-      const client = await makeClient(me, wallet.sign)
+      const client = await makePotClient(pot, me, wallet.sign)
       const hash = await sendAction(client, action, me, setPhase)
       const triggered = action === 'approve' && isLastApproval
       setOutcome({ ok: true, hash, text: triggered ? `Dernier accord reçu : ${total} XLM ont été versés à ${recipient}.` : DONE_LABEL[action] })
@@ -181,6 +183,50 @@ export function ActionPanel({ state, wallet, now, onDone }: Props) {
             )}
           </span>
         </p>
+      )}
+    </Shell>
+  )
+}
+
+/** Le destinataire n'a rien à signer : il suit la progression jusqu'au paiement. */
+function OwnerView({ state, now }: { state: GroupPaymentState; now: Date }) {
+  const [copied, setCopied] = useState(false)
+  const n = state.participants.length
+  const contributed = state.participants.filter((p) => p.state.contributed).length
+  const executed = state.status === 'Executed'
+  const expired = !executed && now.getTime() > Number(state.config.deadline) * 1000
+  const total = formatXlm(state.config.amount * BigInt(n))
+  const steps = [
+    { label: 'Pot créé, participants invités', done: true },
+    { label: `Parts versées · ${executed ? n : contributed}/${n}`, done: executed || contributed === n },
+    { label: `Accords · ${executed ? n : state.approvals}/${n}`, done: executed || state.approvals === n },
+    { label: `Paiement reçu · ${total} XLM`, done: executed },
+  ]
+  const current = steps.findIndex((s) => !s.done)
+  const share = async () => {
+    await navigator.clipboard.writeText(location.href)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <Shell>
+      <p className="notice notice-calm">
+        <Crown /> Vous êtes le destinataire de ce pot. Vous n’avez rien à signer : le paiement arrivera tout seul au dernier accord.
+      </p>
+      <ol className="stepper">
+        {steps.map((s, i) => (
+          <li key={s.label} className={s.done ? 'is-done' : i === current && !expired ? 'is-current' : ''}>
+            <span className="step-dot">{s.done ? <Check width={12} height={12} /> : i + 1}</span>
+            {s.label}
+          </li>
+        ))}
+      </ol>
+      {executed && <p className="notice notice-success"><Check /> {total} XLM ont été versés sur votre compte.</p>}
+      {expired && <p className="notice notice-warning"><Alert /> Échéance dépassée sans accord unanime : le paiement ne partira plus.</p>}
+      {!executed && !expired && (
+        <button className="btn btn-ghost btn-block" onClick={share}>
+          {copied ? <><Check /> Lien copié</> : <><Copy /> Copier le lien du pot</>}
+        </button>
       )}
     </Shell>
   )

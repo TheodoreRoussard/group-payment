@@ -47,3 +47,21 @@ export const Alert = (p: P) => (
 export const Spinner = (p: P) => (
   <svg {...base} {...p} className="spin"><path d="M21 12a9 9 0 1 1-6.2-8.6" /></svg>
 )
+export const Bell = (p: P) => (
+  <svg {...base} {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" /></svg>
+)
+export const Plus = (p: P) => (
+  <svg {...base} {...p}><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+)
+export const Menu = (p: P) => (
+  <svg {...base} {...p}><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" /></svg>
+)
+export const Close = (p: P) => (
+  <svg {...base} {...p}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+)
+export const Mail = (p: P) => (
+  <svg {...base} {...p}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
+)
+export const Crown = (p: P) => (
+  <svg {...base} {...p}><path d="m3 8 4 4 5-7 5 7 4-4-2 11H5L3 8Z" /></svg>
+)
