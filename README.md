@@ -1,4 +1,4 @@
-# Pot commun — paiement de groupe trustless sur Stellar
+# Pot commun : paiement de groupe trustless sur Stellar
 
 Un smart contract Soroban où chaque participant **verse sa part**, puis **donne son accord**.
 Quand le dernier accord arrive, le contrat **paie automatiquement** le destinataire, dans la même transaction.
